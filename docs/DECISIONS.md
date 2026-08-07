@@ -155,4 +155,75 @@ methodology before implementing it.
 
 ---
 
+## 2026-08-07 (later still) — Motor vertical slice built (local)
+
+User approved Motor as the first vertical slice with explicit emphasis on
+speed. Full stack, local only (not yet deployed to Vercel/Supabase - D-019
+says deploy once it works, this is that "once it works" checkpoint):
+Postgres schema + bulk load, typed motor_specs table, Next.js/TS app with
+`/api/search` and `/api/motor/query`, guided UI at `/motor`.
+
+### DECIDED
+
+- **D-022** Schema: `catalog_pages` + `catalog_parts` (generic retrieval
+  index, mirrors the JSONL from D-013/014) plus a first category-specific
+  typed table, `motor_specs`. Indexes: btree on `normalized_part_number` /
+  `normalized_no_separator` for exact/normalized (0.3ms measured), GIN
+  trigram (`pg_trgm`) on `normalized_no_separator` for substring/fuzzy.
+- **D-023** `motor_specs` population: positionally map each row's
+  already-split `columns` against its `nearest_header_line` (also split the
+  same way), classify header labels by keyword into canonical fields (HP,
+  voltage, RPM, amps, rotation, speeds, shaft dia/length, capacitor,
+  weight). 653/814 Motors-category rows got at least one field typed; the
+  rest stay searchable in `catalog_parts` but aren't in the typed pool.
+- **D-024** **Field-shape + plausibility validation added after finding
+  real contamination**: initial pass let bullet-point/description text and
+  wrong-column numeric values (an RPM value shape-matching as a voltage,
+  etc.) into typed fields - e.g. "voltage" candidates included
+  "• Walk Ins" and "3/4". Fixed with per-field regex shape checks plus
+  numeric plausibility ranges (voltage 12-600, RPM 200-4000, amps
+  0.02-150, speeds 1-6). Re-verified: all 23 distinct `voltage_raw` values
+  post-fix are genuine motor voltages, all 12 distinct `rotation_raw`
+  values are genuine rotation codes. This is logged in detail because it's
+  exactly the failure mode CLAUDE.md 10 warns about (data that looks
+  plausible but isn't what it claims to be) - caught by testing, not by
+  assumption.
+- **D-025** Question engine: given known facts, filter `motor_specs`
+  candidates by exact match on each known field's raw printed value (no
+  unit normalization yet - stated limitation, not silent), then rank
+  unset fields by tier (HARD_CONSTRAINT > IMPORTANT > PREFERENCE) and,
+  within a tier, by count of distinct values remaining (more discriminating
+  asked first). A field is only offered as the next question if it can
+  actually discriminate (>=2 distinct values).
+- **D-026** `CandidateStatus` deliberately does NOT reuse CLAUDE.md 8's
+  VERIFIED label - this flow is spec-driven forward search from
+  user-REPORTED facts, not cross-referencing a known original part, so the
+  ceiling is `MATCHES_ALL_KNOWN_FIELDS` (all HARD_CONSTRAINT/IMPORTANT
+  fields both known and matching), not VERIFIED.
+
+### Quality / performance (measured, not estimated)
+
+- Full 3-question guided scenario (unknown motor -> voltage=115 ->
+  +rotation=REV -> +hp=1/3): 653 -> 177 -> 50 -> 12 candidates. Each step's
+  full HTTP round trip: 15-30ms. Server-side query computation: 1-4ms.
+- Exact catalog part search via `/api/search`: ~15-20ms full round trip
+  after connection pool warms up (first request ~65ms, includes pool init).
+- Both comfortably inside the CLAUDE.md 28 targets (<2s exact,
+  ideally <5s AI-assisted) with large headroom - no caching layer needed
+  at this data size (~20k catalog rows, ~650 typed motor rows).
+
+### Known limitations (stated, not hidden)
+
+- No unit normalization: "3/4" won't match "0.75"; typed values must match
+  the catalog's exact printed format. Next candidate limitation to close
+  if it turns out to matter in real use.
+- `motor_specs` covers HP, voltage, RPM, amps, rotation, speeds, shaft
+  dia/length, capacitor, weight - NOT phase, frequency, mounting/frame, or
+  enclosure (CLAUDE.md 7 lists these too; this catalog's tables don't
+  reliably expose them as separate columns for a first-pass parser).
+- Runs against local Postgres in this dev session only - not yet deployed
+  per D-019's plan to deploy after it works locally.
+
+---
+
 *Log format: append new dated sections per discovery round; do not rewrite prior entries except to change a status (e.g. OPEN → DECIDED) with a short note.*

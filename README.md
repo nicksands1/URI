@@ -3,40 +3,67 @@
 HVAC/R counter-sales intelligence tool. See `CLAUDE.md` for the full product
 constitution and `docs/DECISIONS.md` for the running decision log.
 
-## Status: early V0.1 slice
+## Status: V0.1 - Motor vertical slice (local)
 
-What exists right now is a deterministic search core, not a web app yet:
+A Next.js/TypeScript app backed by Postgres, plus the Python ingestion
+scripts that feed it:
 
 ```
-scripts/ingest/parse_catalog.py   # parses the URI-515 catalog (Markdown) into
-                                   # provenance-carrying JSONL records
-scripts/search/search_catalog.py  # exact / normalized / substring / fuzzy
-                                   # part-number search over that index
+scripts/ingest/parse_catalog.py      # parses URI-515Catalog.md into
+                                      # provenance-carrying JSONL
+scripts/ingest/schema.sql            # Postgres schema
+scripts/ingest/load_to_postgres.py   # loads the JSONL into Postgres
+scripts/ingest/parse_motor_specs.py  # second pass: typed Motor spec table
+scripts/search/search_catalog.py     # standalone CLI search (no DB needed)
+
+app/                                  # Next.js app (search UI + guided Motor UI)
+lib/                                  # search, question engine, domain types
 ```
 
 ### Setup
 
-The catalog source is private and gitignored - it is not in this repo. Place
-the converted catalog Markdown at `data/private/source/URI-515Catalog.md`,
-then:
+1. **Catalog source** (private, gitignored, not in this repo): place the
+   converted catalog Markdown at `data/private/source/URI-515Catalog.md`.
+2. **Postgres**: a local server with a `counter_intelligence` database and
+   `ci_app` role (see `.env.example`). Apply the schema:
+   ```
+   psql -d counter_intelligence -f scripts/ingest/schema.sql
+   ```
+3. **Ingest**:
+   ```
+   python3 scripts/ingest/parse_catalog.py
+   python3 scripts/ingest/load_to_postgres.py
+   python3 scripts/ingest/parse_motor_specs.py
+   ```
+4. **Run the app**:
+   ```
+   npm install
+   npm run dev
+   ```
+   Search: `/` · Guided Motor flow: `/motor`
 
-```
-python3 scripts/ingest/parse_catalog.py
-```
-
-This writes derived JSONL/JSON files to `data/private/derived/` (also
-gitignored).
-
-### Search
+### Standalone CLI search (no Postgres/Next.js needed)
 
 ```
 python3 scripts/search/search_catalog.py "U0150AB"
-python3 scripts/search/search_catalog.py "3AJB021" --limit 5
-python3 scripts/search/search_catalog.py "U0150AB" --json
 ```
 
-Every result carries its source document, PDF page, catalog page, section,
-and the raw catalog line - see `CLAUDE.md` section 9 (evidence) and 10
-(anti-hallucination). A result only ever means "listed in the catalog text";
-it is never a claim about stock, availability, or that it's the right
-replacement for anything.
+### Evidence model
+
+Every search/candidate result carries its source document, PDF page,
+catalog page, and section - see `CLAUDE.md` §9 (evidence) and §10
+(anti-hallucination). A catalog search hit only ever means "listed in the
+catalog text" - never a stock/availability claim. The Motor guided flow's
+`MATCHES_ALL_KNOWN_FIELDS` status means "matches everything you told me" -
+not a verified OEM replacement (see `docs/DECISIONS.md` D-026); every
+known fact came from you, not a nameplate, so it's REPORTED evidence, not
+CONFIRMED.
+
+### Known limitations
+
+- No unit normalization yet (`"3/4"` won't match `"0.75"`); type values as
+  printed in the catalog.
+- Motor fields cover HP, voltage, RPM, amps, rotation, speeds, shaft
+  dia/length, capacitor, weight - not phase, frequency, mounting/frame, or
+  enclosure (not reliably separate columns in this catalog's tables).
+- Local Postgres only - not yet deployed.
