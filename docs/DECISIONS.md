@@ -59,4 +59,67 @@ Per CLAUDE.md §39: billing, multi-tenancy, ERP/inventory integration, live pric
 
 ---
 
+## 2026-08-07 (later still) — First working slice: catalog search core
+
+User said "let's start" rather than continuing the full discovery round.
+Proceeded on the judgment that ingestion + deterministic search need none of
+the open deployment/device/category questions answered first, and are
+themselves the fastest way to produce something real. Full Discovery Round 1
+(device/environment, deployment model, AI provider, priority categories)
+remains open and will be picked back up.
+
+### DECIDED
+
+- **D-013** Ingestion approach for the catalog: a conservative regex-based
+  row detector (`scripts/ingest/parse_catalog.py`), not a real table/column
+  parser. A row is captured if its line starts with a token containing at
+  least one digit, immediately followed by 2+ spaces (i.e. it reads as a
+  table cell). This is deliberately a *retrieval index*, not a verified
+  spec database - column meaning is preserved as an ordered list plus the
+  nearest "Part No." header line for context, not semantically typed. Typed
+  per-category specs (voltage, HP, refrigerant, ...) are deferred to when a
+  specific guided category is built and actually needs them.
+- **D-014** Output: `data/private/derived/catalog_pages.jsonl` (1,251 page
+  records), `catalog_parts.jsonl` (19,749 candidate part rows),
+  `catalog_sections.json` (20-section index with PDF/catalog page ranges).
+  All gitignored - derived from a private source, never committed.
+- **D-015** Search (`scripts/search/search_catalog.py`) follows CLAUDE.md
+  12's ordering: exact -> normalized (separator-insensitive) -> substring ->
+  fuzzy, and **short-circuits at the first deterministic hit** so a clean
+  exact match never gets buried under fuzzy "did you mean" noise. Fuzzy is
+  only reached when nothing deterministic matched.
+- **D-016** No character substitution ever happens silently. Verified
+  concretely: `U0150AB` and `UO150AB` (0 vs letter-O) do **not** match each
+  other via exact/normalized search; `UO150AB` correctly falls through to a
+  labeled `FUZZY` suggestion pointing at `U0150AB`, matching the exact
+  example in CLAUDE.md 13.
+- **D-017** A search hit's `distributor_status` is only ever "listed in
+  catalog" - never "verified," never a stock/availability claim (CLAUDE.md
+  22). A miss is reported as "not found in ingested text," explicitly not
+  "doesn't exist."
+
+### Quality notes (not a decision, just measured)
+
+- Spot-checked extraction noise rate: initial heuristic had ~27% false
+  positives (English words like "Features" landing in column position);
+  requiring the leading token to contain a digit dropped this sharply -
+  remaining noise in later random sampling was ~1/20 (e.g. a bare `1/4`
+  fraction on a fittings page). Acceptable for a retrieval index where every
+  row is labeled `unreviewed` and shows its raw line - never presented as a
+  confirmed fact.
+- End-to-end CLI timing (interpreter start + loading 19,749-row index +
+  query): ~360ms for an exact hit. Within the <2s target in CLAUDE.md 28.
+- Confirmed present in the catalog: `U0150AB` (Heatcraft evaporator),
+  `3AJB021ACAB` and the wider `xAJBxxxxxxxx` Copeland family. `AJB7465AXD`
+  (a CLAUDE.md example query) was not found - correctly reported as "not
+  found," not fabricated.
+
+### OPEN (unchanged, still pending)
+
+O-001 (device/environment), O-002 (deployment model), O-005 (highest-value
+first category), O-006 (AI provider) - see earlier round. Nothing built this
+session depended on these.
+
+---
+
 *Log format: append new dated sections per discovery round; do not rewrite prior entries except to change a status (e.g. OPEN → DECIDED) with a short note.*
