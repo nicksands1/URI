@@ -122,4 +122,37 @@ session depended on these.
 
 ---
 
+## 2026-08-07 (later still) — Discovery Round 1 answered
+
+### DECIDED
+
+- **D-018** (closes O-001) Primary usage context: **work PC, browser only.**
+  Build as a standard browser-based web app; no assumption of admin
+  install rights or a locked-down browser workaround needed unless it
+  surfaces later. Mobile/phone use is not a target for the first slice.
+- **D-019** (closes O-002) Deployment: **small private cloud deploy**
+  (Next.js app + Postgres, e.g. Vercel + Supabase). Chosen over fully-local
+  so the tool is reachable without depending on one machine, and so basic
+  auth can gate it. This also finalizes the stack direction from CLAUDE.md
+  §30 (Next.js/TypeScript/React/Postgres) rather than leaving it open.
+- **D-020** (closes O-005) First guided-question-engine categories, in
+  priority order: **Compressor, Motor, TXV.** Relay/Contactor explicitly
+  deferred (not dropped) - it's the canonical demo example ("208 relay")
+  but judged lower-stakes than a wrong compressor/motor/TXV pick.
+- **D-021** (O-006) AI provider decision **explicitly deferred by choice**,
+  not just unanswered - the next slice (question-engine logic, category
+  selection templates) will be built provider-agnostic per CLAUDE.md §29,
+  with an Anthropic key wired in behind that abstraction when actually
+  needed (query classification / explanation, not search - search stays
+  deterministic with no AI in the loop).
+
+### Implication
+
+This unblocks moving from standalone CLI scripts to an actual web app.
+That's a materially larger step (new framework, hosted DB, deployment
+account) - proposing a concrete first vertical slice next per CLAUDE.md §31
+methodology before implementing it.
+
+---
+
 *Log format: append new dated sections per discovery round; do not rewrite prior entries except to change a status (e.g. OPEN → DECIDED) with a short note.*
