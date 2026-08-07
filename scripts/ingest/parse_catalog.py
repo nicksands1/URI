@@ -168,8 +168,20 @@ def extract_part_rows(page: CatalogPage) -> list[CatalogPartRow]:
     nearest_header: str | None = None
 
     for line in lines:
-        if HEADER_LINE_HINT_RE.search(line):
-            nearest_header = line.strip()
+        header_match = HEADER_LINE_HINT_RE.search(line)
+        # Only accept this as a header line if "Part No." is at (or very
+        # near) the start of the line, not buried after unrelated prose.
+        # 2-column PDF layouts occasionally glue a trailing sentence from
+        # an adjacent column onto the same physical line as a real header
+        # (e.g. "...heat pump units.          Part No.   Tons   Inlet..."),
+        # which would otherwise be accepted as the header and silently
+        # shift every downstream column mapping by one position - found via
+        # real data during TXV ingestion (ERSE2C), not assumed.
+        if header_match:
+            leading_whitespace_len = len(line) - len(line.lstrip())
+            position_in_stripped_line = header_match.start() - leading_whitespace_len
+            if position_in_stripped_line <= 5:
+                nearest_header = line.strip()
 
         stripped = line.lstrip()
         m = PART_TOKEN_RE.match(stripped)

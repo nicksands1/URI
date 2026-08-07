@@ -3,21 +3,24 @@
 HVAC/R counter-sales intelligence tool. See `CLAUDE.md` for the full product
 constitution and `docs/DECISIONS.md` for the running decision log.
 
-## Status: V0.1 - Motor vertical slice (local)
+## Status: V0.1 - Motor, Compressor, TXV vertical slices (local)
 
 A Next.js/TypeScript app backed by Postgres, plus the Python ingestion
 scripts that feed it:
 
 ```
-scripts/ingest/parse_catalog.py      # parses URI-515Catalog.md into
-                                      # provenance-carrying JSONL
-scripts/ingest/schema.sql            # Postgres schema
-scripts/ingest/load_to_postgres.py   # loads the JSONL into Postgres
-scripts/ingest/parse_motor_specs.py  # second pass: typed Motor spec table
-scripts/search/search_catalog.py     # standalone CLI search (no DB needed)
+scripts/ingest/parse_catalog.py           # parses URI-515Catalog.md into
+                                           # provenance-carrying JSONL
+scripts/ingest/schema.sql                 # Postgres schema
+scripts/ingest/load_to_postgres.py        # loads the JSONL into Postgres
+scripts/ingest/parse_motor_specs.py       # typed Motor spec table
+scripts/ingest/parse_compressor_specs.py  # typed Compressor spec table
+scripts/ingest/parse_txv_specs.py         # typed TXV spec table
+scripts/search/search_catalog.py          # standalone CLI search (no DB needed)
 
-app/                                  # Next.js app (search UI + guided Motor UI)
-lib/                                  # search, question engine, domain types
+app/                                       # Next.js app (search UI + 3 guided UIs)
+lib/                                       # search, question engine, domain types
+components/GuidedSearch.tsx                # shared guided-search UI, one per category
 ```
 
 ### Setup
@@ -34,13 +37,15 @@ lib/                                  # search, question engine, domain types
    python3 scripts/ingest/parse_catalog.py
    python3 scripts/ingest/load_to_postgres.py
    python3 scripts/ingest/parse_motor_specs.py
+   python3 scripts/ingest/parse_compressor_specs.py
+   python3 scripts/ingest/parse_txv_specs.py
    ```
 4. **Run the app**:
    ```
    npm install
    npm run dev
    ```
-   Search: `/` · Guided Motor flow: `/motor`
+   Search: `/` · Guided flows: `/motor` · `/compressor` · `/txv`
 
 ### Standalone CLI search (no Postgres/Next.js needed)
 
@@ -66,4 +71,10 @@ CONFIRMED.
 - Motor fields cover HP, voltage, RPM, amps, rotation, speeds, shaft
   dia/length, capacitor, weight - not phase, frequency, mounting/frame, or
   enclosure (not reliably separate columns in this catalog's tables).
+- **Compressor and TXV do not model refrigerant or application (low/med/
+  high temp)** - the single most important selection driver for both,
+  per CLAUDE.md. It's printed as prose tied to a model family/series in the
+  catalog, not a per-row column, and this app will not guess the
+  association. Both guided pages show a mandatory warning; refrigerant
+  compatibility must be confirmed manually.
 - Local Postgres only - not yet deployed.

@@ -47,9 +47,17 @@ export default function HomePage() {
     <main style={{ maxWidth: 780, margin: "0 auto", padding: "32px 20px" }}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Counter Intelligence</h1>
       <p style={{ color: "#8b96a5", marginTop: 0, marginBottom: 20 }}>
-        Type a part number.{" "}
+        Type a part number, or start a guided search:{" "}
         <Link href="/motor" style={{ color: "#58a6ff" }}>
-          Or start a guided Motor search →
+          Motor
+        </Link>
+        {" · "}
+        <Link href="/compressor" style={{ color: "#58a6ff" }}>
+          Compressor
+        </Link>
+        {" · "}
+        <Link href="/txv" style={{ color: "#58a6ff" }}>
+          TXV
         </Link>
       </p>
 

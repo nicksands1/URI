@@ -226,4 +226,79 @@ Postgres schema + bulk load, typed motor_specs table, Next.js/TS app with
 
 ---
 
+## 2026-08-07 (later still) — Compressor and TXV, same pattern
+
+User asked to replicate the Motor pattern for Compressor and TXV.
+
+### DECIDED
+
+- **D-027** Compressor typed fields: capacity (BTUH), HP, voltage, phase,
+  RLA, mount, H/W/L dimensions, suction/discharge connection, weight -
+  mirrors what's actually tabular across ~1800 rows spanning Copeland,
+  Bitzer, Carlyle, Embraco, Tecumseh, Maneurop, Danfoss, Brainerd,
+  Blissfield. Tiers: voltage/phase HARD_CONSTRAINT, capacity/HP/suction/
+  discharge IMPORTANT, RLA/mount PREFERENCE.
+- **D-028** **Refrigerant and application (low/med/high temp) are
+  deliberately NOT modeled for Compressor OR TXV.** Inspected real pages
+  (e.g. PDF p.87 Copeland, PDF p.206 Sporlan TXV series): refrigerant is
+  printed as prose tied to a model FAMILY/series ("3 SERIES ... Refrigerant
+  cooled", "Refrigerant: R-404A, R-408A, R-507"), interleaved with other
+  columns by a 2-column PDF layout that does not reliably linearize back to
+  a single table row. Attempting to auto-associate a refrigerant string
+  with a specific row risked exactly the failure mode CLAUDE.md 10 exists
+  to prevent - a plausible-looking but potentially wrong fact presented as
+  if verified. Both `/compressor` and `/txv` show a mandatory, non-
+  dismissable warning banner instead of a silently absent field. This is
+  the single biggest capability gap in both slices and should be the first
+  thing addressed if these categories get built out further (e.g. by
+  parsing the "SERIES" prose blocks as page/family-level notes, or a real
+  nomenclature-decoder pass per CLAUDE.md 18).
+- **D-029** TXV typed fields: inlet/outlet connection, equalizer (internal/
+  external), tons (capacity), thermostatic charge code. Scope limited to
+  rows in the VALVES section whose header line is TXV-shaped
+  (contains "thermostatic", or both "tons" and "equalizer") - VALVES also
+  contains solenoid valves, check valves, etc. with different columns;
+  791/1017 VALVES rows were correctly excluded as non-TXV rather than
+  force-mapped. Tiers: inlet/outlet/equalizer HARD_CONSTRAINT (physical/
+  functional - an internally- vs. externally-equalized valve is not
+  interchangeable without system modification), tons IMPORTANT,
+  thermostatic charge PREFERENCE.
+- **D-030** **Found and fixed a real upstream bug affecting all three
+  parsers, not just TXV**: `parse_catalog.py`'s header-line detection
+  accepted a header line if "Part No." appeared ANYWHERE in it. On some
+  pages, 2-column PDF layout linearization glues a trailing sentence from
+  an adjacent column onto the same physical line as a real header (e.g.
+  "...heat pump units.          Part No.   Tons   Inlet..."), which silently
+  shifted every downstream column mapping by one position - individual
+  values still passed shape/plausibility validation because they
+  coincidentally looked like *some* valid value, just for the wrong field
+  (e.g. `ERSE2C` real tons=2 was stored as tons="3/8", its actual inlet
+  value). Fixed by requiring "Part No." to appear within the first ~5
+  characters of the (whitespace-stripped) line. Re-ran the full ingestion
+  chain after the fix. Motor/Compressor counts were essentially unchanged
+  (confirms they weren't much affected), TXV improved from 207 to 222 typed
+  rows (fewer rows lost to "no fields mapped" from a corrupted header).
+  Spot-checked the specific failing case (`ERSE2C`, `EFVE2C`) before and
+  after - `EFVE2C` now correctly reads tons=2/inlet=3/8/outlet=1/2/charge=C,
+  matching its own part-number convention.
+- **D-031** Refactored Motor's question engine into a shared generic core
+  (`lib/domain/questionEngine.ts`) parameterized by table/fields, used by
+  all three categories, to avoid tripling the same filter/rank logic
+  (CLAUDE.md 40: avoid duplicated domain logic). Same for the guided-search
+  UI (`components/GuidedSearch.tsx`) - each category page is now a ~15-line
+  config wrapper.
+
+### Quality / performance (measured)
+
+- Compressor: 1767/1835 rows typed (96%). Guided scenario (unknown ->
+  voltage=208‑230 + phase=1 -> +capacity=10000): 1835 -> 253 -> candidates
+  with capacity narrowed. Round trips: 14-28ms.
+- TXV: 222/1017 VALVES rows correctly identified and typed as TXVs.
+  CLAUDE.md's own example ("3/8 x 1/2 TXV") scenario: 222 -> 94 (inlet+
+  outlet) -> 78 (+equalizer=External) candidates. Round trips: 14-18ms.
+- Both comfortably inside CLAUDE.md 28 targets, consistent with Motor's
+  numbers - no per-category performance cliff from adding two more tables.
+
+---
+
 *Log format: append new dated sections per discovery round; do not rewrite prior entries except to change a status (e.g. OPEN → DECIDED) with a short note.*

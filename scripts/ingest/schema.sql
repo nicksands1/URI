@@ -85,3 +85,81 @@ CREATE INDEX IF NOT EXISTS idx_motor_specs_normalized
     ON motor_specs (normalized_part_number);
 CREATE INDEX IF NOT EXISTS idx_motor_specs_voltage ON motor_specs (voltage_raw);
 CREATE INDEX IF NOT EXISTS idx_motor_specs_rotation ON motor_specs (rotation_raw);
+
+-- Typed Compressor selection-driver table (CLAUDE.md 7: HP alone is not
+-- enough; capacity without rating condition may not be comparable).
+--
+-- IMPORTANT GAP, stated not hidden: refrigerant and application
+-- (low/med/high temp) are NOT table columns in this catalog - they are
+-- printed as prose tied to a model FAMILY/series (e.g. "3 SERIES ...
+-- Refrigerant cooled", "Oil charge: AB = Alkylbenzene; POE = Polyolester"),
+-- interleaved with other columns in a 2-column PDF layout that does not
+-- reliably linearize back to a single row. Rather than guess a
+-- refrigerant->part association that could be wrong (exactly the failure
+-- mode CLAUDE.md 10 exists to prevent), this table does not model
+-- refrigerant/application at all. The app surfaces this as a mandatory
+-- manual-check warning, not a silently missing field.
+CREATE TABLE IF NOT EXISTS compressor_specs (
+    id                  BIGSERIAL PRIMARY KEY,
+    catalog_part_id     BIGINT NOT NULL REFERENCES catalog_parts(id) ON DELETE CASCADE,
+    raw_part_number     TEXT NOT NULL,
+    normalized_part_number TEXT NOT NULL,
+    capacity_btuh_raw   TEXT,
+    hp_raw              TEXT,
+    voltage_raw         TEXT,
+    phase_raw           TEXT,
+    rla_raw             TEXT,
+    mount_raw           TEXT,
+    dim_h_raw           TEXT,
+    dim_w_raw           TEXT,
+    dim_l_raw           TEXT,
+    suction_raw         TEXT,
+    discharge_raw       TEXT,
+    weight_raw          TEXT,
+    section_title       TEXT,          -- manufacturer, e.g. "COPELAND", "BITZER"
+    pdf_page            INTEGER NOT NULL,
+    catalog_page        INTEGER,
+    header_line_used    TEXT,
+    field_mapping_method TEXT NOT NULL DEFAULT 'positional-header-match-v1',
+    review_status       TEXT NOT NULL DEFAULT 'unreviewed'
+);
+
+CREATE INDEX IF NOT EXISTS idx_compressor_specs_normalized
+    ON compressor_specs (normalized_part_number);
+CREATE INDEX IF NOT EXISTS idx_compressor_specs_voltage ON compressor_specs (voltage_raw);
+CREATE INDEX IF NOT EXISTS idx_compressor_specs_phase ON compressor_specs (phase_raw);
+CREATE INDEX IF NOT EXISTS idx_compressor_specs_manufacturer ON compressor_specs (section_title);
+
+-- Typed TXV selection-driver table (CLAUDE.md 7: line size + refrigerant
+-- alone is NOT enough).
+--
+-- IMPORTANT GAP, stated not hidden: same as compressor_specs - refrigerant
+-- is prose tied to a model series, not a per-row column, and TXV/valve
+-- pages have messier 2-column layout artifacts than Motor/Compressor
+-- pages (verified during ingestion - some nearest_header_line values carry
+-- trailing contamination from an adjacent column). Refrigerant is not
+-- modeled; the app requires an explicit manual-check acknowledgment before
+-- showing candidates, since refrigerant mismatch is the single most
+-- dangerous TXV selection error per CLAUDE.md's TXV section.
+CREATE TABLE IF NOT EXISTS txv_specs (
+    id                  BIGSERIAL PRIMARY KEY,
+    catalog_part_id     BIGINT NOT NULL REFERENCES catalog_parts(id) ON DELETE CASCADE,
+    raw_part_number     TEXT NOT NULL,
+    normalized_part_number TEXT NOT NULL,
+    tons_raw            TEXT,          -- nominal capacity, tons
+    inlet_raw           TEXT,
+    outlet_raw          TEXT,
+    thermostatic_charge_raw TEXT,      -- e.g. "C", "Z", "ZP", "ZP40", "A/C"
+    equalizer_raw        TEXT,         -- "Internal" | "External"
+    section_title       TEXT,
+    pdf_page            INTEGER NOT NULL,
+    catalog_page        INTEGER,
+    header_line_used    TEXT,
+    field_mapping_method TEXT NOT NULL DEFAULT 'positional-header-match-v1',
+    review_status       TEXT NOT NULL DEFAULT 'unreviewed'
+);
+
+CREATE INDEX IF NOT EXISTS idx_txv_specs_normalized
+    ON txv_specs (normalized_part_number);
+CREATE INDEX IF NOT EXISTS idx_txv_specs_equalizer ON txv_specs (equalizer_raw);
+CREATE INDEX IF NOT EXISTS idx_txv_specs_inlet ON txv_specs (inlet_raw);
