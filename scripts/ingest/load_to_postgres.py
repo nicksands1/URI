@@ -4,32 +4,23 @@ Bulk-load the parsed catalog JSONL (scripts/ingest/parse_catalog.py output)
 into Postgres. Idempotent: truncates and reloads catalog_pages/catalog_parts
 each run so re-ingesting a re-converted catalog is safe.
 
-Env vars (all have local-dev defaults matching scripts/ingest/schema.sql):
-    CI_DB_HOST, CI_DB_PORT, CI_DB_NAME, CI_DB_USER, CI_DB_PASSWORD
+Env vars: DATABASE_URL (Supabase/Vercel-style connection string), or
+discrete CI_DB_HOST/PORT/NAME/USER/PASSWORD for local dev. See db.py.
 """
 from __future__ import annotations
 
 import json
-import os
 import sys
 import time
 from pathlib import Path
 
-import psycopg2
 import psycopg2.extras
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from db import get_conn  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DERIVED_DIR = REPO_ROOT / "data" / "private" / "derived"
-
-
-def get_conn():
-    return psycopg2.connect(
-        host=os.environ.get("CI_DB_HOST", "localhost"),
-        port=os.environ.get("CI_DB_PORT", "5432"),
-        dbname=os.environ.get("CI_DB_NAME", "counter_intelligence"),
-        user=os.environ.get("CI_DB_USER", "ci_app"),
-        password=os.environ.get("CI_DB_PASSWORD", "ci_local_dev"),
-    )
 
 
 def load_pages(cur, path: Path) -> int:

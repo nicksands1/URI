@@ -14,12 +14,15 @@ explicitly rather than silently omit it.
 """
 from __future__ import annotations
 
-import os
 import re
+import sys
 import time
+from pathlib import Path
 
-import psycopg2
 import psycopg2.extras
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from db import get_conn  # noqa: E402
 
 SPLIT_RE = re.compile(r"[ \t]{2,}")
 
@@ -134,15 +137,6 @@ def map_row(header_line: str, columns: list[str]) -> dict[str, str]:
             mapped[field] = value
     return mapped
 
-
-def get_conn():
-    return psycopg2.connect(
-        host=os.environ.get("CI_DB_HOST", "localhost"),
-        port=os.environ.get("CI_DB_PORT", "5432"),
-        dbname=os.environ.get("CI_DB_NAME", "counter_intelligence"),
-        user=os.environ.get("CI_DB_USER", "ci_app"),
-        password=os.environ.get("CI_DB_PASSWORD", "ci_local_dev"),
-    )
 
 
 def main() -> None:
