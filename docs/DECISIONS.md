@@ -41,7 +41,20 @@ Per CLAUDE.md §39: billing, multi-tenancy, ERP/inventory integration, live pric
 ### RISK
 
 - **R-001 — Copyright/visibility risk on textbook content.** `Refrigeration_1.md` through `Refrigeration_4.md` (full text conversion of the commercially published *Refrigeration & Air Conditioning Technology, 9th Edition*, ~1,700 combined page markers) are already committed to git history at the repo root, **not** gitignored, predating this session. If `nicksands1/URI` is a public repository this is a live copyright exposure; even if private, the full text sitting in an unencrypted repo (and now git history permanently) is worth a deliberate decision rather than default inertia. Not fixed automatically this session — flagged for Discovery Round 1 (O-004).
-- **R-002 — No catalog source yet.** `URI-515Catalog.pdf`, the single highest-value source for "is this in my distributor's catalog" lookups, is not present anywhere in the repo or filesystem. Needs to be supplied via `data/private/source/` before catalog-backed lookup can be built.
+- **R-002 — No catalog source yet.** ~~`URI-515Catalog.pdf`, the single highest-value source for "is this in my distributor's catalog" lookups, is not present anywhere in the repo or filesystem.~~ **RESOLVED 2026-08-07** — see D-011.
+
+---
+
+## 2026-08-07 (later) — Catalog source received
+
+### DECIDED
+
+- **D-011** `URI-515Catalog.md` received from user as a pre-converted Markdown file (user ran their own PDF→Markdown conversion outside this session; original was 93MB PDF / 1,251 pages, too large to attach directly). Placed at `data/private/source/URI-515Catalog.md`, confirmed gitignored via `git check-ignore`. Verified: all 1,251 `## PDF Page N` markers present (none missing/truncated), section index at top maps 21 catalog sections to PDF/catalog page ranges, and sampled tables (motor spec tables: Part No./HP/Voltage/RPM/Amps/Rotation/Shaft Dia./Shaft L/Wgt) retain correct column alignment in fixed-width blocks. Quality is good enough to ingest as-is.
+- **D-012** Because the source is already Markdown (not the original PDF), the ingestion pipeline's "extraction" stage becomes parsing this Markdown's page blocks/tables rather than PDF text/table extraction. Provenance (source_document, PDF page, catalog page, section) is still fully derivable from the `<a id="pdf-page-N">` anchors and section headers, so this doesn't compromise the traceability requirement in CLAUDE.md §20 — just changes the input format for the parser. The original PDF is not in our possession, so this Markdown *is* the raw source of record going forward for this document.
+
+### ASSUMPTION
+
+- **A-004** Not yet spot-checked beyond a few sampled pages (front matter, page 10-11 motor tables) — full-file structural QA (e.g. every section's tables parse cleanly, no silent column-shift errors elsewhere in 1,251 pages) is deferred to when the ingestion parser is actually built, since that's where errors would surface anyway.
 
 ---
 
