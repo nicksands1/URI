@@ -301,4 +301,49 @@ User asked to replicate the Motor pattern for Compressor and TXV.
 
 ---
 
+## 2026-09-08 — New feature area: interactive 3D equipment visualizations
+
+User requested a new, distinct feature: interactive Three.js-based 3D
+visualizations (system cutaways, animated refrigeration cycle, moving
+parts, real-time-style data overlays) for whole systems (condensing units,
+evaporator coils/air handlers, compressors, ice machines) plus a
+selectable component gallery (contactors, relays, transformers, TXVs,
+valves, capacitors, etc.). This is unrelated to the existing search/guided-
+question engine work and wasn't previously scoped in this log, so treated
+as a new discovery item per CLAUDE.md §31 rather than started silently.
+
+### DECIDED
+
+- **D-032** Delivery format: new route(s) inside the existing Next.js app
+  (not a standalone artifact), e.g. `app/visualize/...`. Three.js added as
+  a real npm dependency. Integrates with the existing app long-term over
+  faster but disconnected iteration.
+- **D-033** Catalog data for real part numbers/specs: user will re-supply
+  `data/private/source/URI-515Catalog.md` (private container filesystem is
+  ephemeral — it was not present in this fresh clone). First visualization
+  build is blocked on receiving it; falling back to generic industry-
+  standard data (labeled as such, per user's own explicit fallback
+  instruction) only if asked to proceed without it.
+- **D-034** Evidence-labeling rule for this feature, extending CLAUDE.md §9
+  to a new medium: any value shown that came from the ingested catalog
+  (part number, voltage, capacity, connection size, dimensions, etc.) must
+  be visually distinguished in the UI from illustrative/generic 3D
+  geometry and animation behavior that has no source in the catalog (no
+  text catalog contains CAD/mesh data for internals). Generic geometry is
+  permitted per user instruction but must never be presented as if traced
+  from a manufacturer drawing.
+
+### OPEN
+
+- **O-007** Scope/sequencing of the full vision (systems: condensing unit,
+  evaporator/air handler, compressor types, ice machines; component
+  gallery: contactors, relays, transformers, thermostats, pressure
+  controls/transducers, TXVs, solenoid/check/ball valves, capacitors,
+  terminal blocks/fuses/overloads, fittings/service valves, driers/sight
+  glasses/accumulators) — building one system at a time starting with the
+  air-cooled condensing unit per user's own request; each further system/
+  component to be proposed and confirmed before building, not assumed.
+
+---
+
 *Log format: append new dated sections per discovery round; do not rewrite prior entries except to change a status (e.g. OPEN → DECIDED) with a short note.*
