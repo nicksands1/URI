@@ -3,7 +3,24 @@
 HVAC/R counter-sales intelligence tool. See `CLAUDE.md` for the full product
 constitution and `docs/DECISIONS.md` for the running decision log.
 
-## Status: V0.1 - Motor, Compressor, TXV vertical slices (local)
+## Status: V0.1 - Motor, Compressor, TXV vertical slices (local), plus a
+## first 3D equipment visualization
+
+### 3D visualization: `/visualize/condensing-unit`
+
+A separate, newer feature area: an interactive Three.js visualization of a
+real catalog unit (Trenton TQZA020L8HS2DE, p.152), with orbit/zoom/pan, a
+cutaway toggle, click-to-isolate components, an animated color-coded
+refrigerant flow (high-pressure vapor / high-pressure liquid / low-pressure
+vapor), and a spec panel that distinguishes catalog-cited values from
+illustrative/generic ones. See `docs/DECISIONS.md`'s 2026-09-08 entries for
+how it was scoped and sourced, and
+`lib/domain/visualization/condensingUnitData.ts` for the cited data itself.
+Internal 3D geometry (compressor shape, coil layout, etc.) is schematic,
+not a manufacturer drawing - the catalog doesn't contain CAD data - see
+that file's header comment for what is/isn't cited.
+
+### Search / guided-question engine
 
 A Next.js/TypeScript app backed by Postgres, plus the Python ingestion
 scripts that feed it:

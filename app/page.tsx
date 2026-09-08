@@ -59,6 +59,10 @@ export default function HomePage() {
         <Link href="/txv" style={{ color: "#58a6ff" }}>
           TXV
         </Link>
+        {" · "}
+        <Link href="/visualize/condensing-unit" style={{ color: "#58a6ff" }}>
+          3D: Condensing Unit
+        </Link>
       </p>
 
       <form

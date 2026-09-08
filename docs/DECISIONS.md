@@ -346,4 +346,101 @@ as a new discovery item per CLAUDE.md §31 rather than started silently.
 
 ---
 
+## 2026-09-08 (later) — Refrigeration Equipment catalog excerpt received; unit chosen
+
+User supplied two scanned/image-only PDF chunks (no text layer — screenshots
+of catalog pages, not the OCR'd markdown used for Motor/Compressor/TXV)
+covering the full **Refrigeration Equipment** section, catalog pages
+135–195: `URI-515Catalog-refrigeration-equipment-pt1-p135-164.pdf` (30pp)
+and `...pt2-p165-195.pdf` (31pp). Saved to `data/private/source/`,
+confirmed gitignored via `git check-ignore`. Read visually page-by-page
+(rendered to PNG with `pypdfium2`, no OCR/text-extraction pipeline run —
+out of scope for a one-page data pull; full ingestion into `catalog_parts`
+deferred to O-007 if this section gets a typed spec table later).
+
+### DECIDED
+
+- **D-035** First visualization's featured unit: **Trenton
+  TQZA020L8HS2DE** — Air Cooled Condensing Unit, Outdoor, Scroll, Low
+  Temperature line. Source: URI-515 Catalog, **catalog/PDF p.152**
+  (`...pt1-p135-164.pdf`, page index 17), section "TRENTON REFRIGERATION
+  › AIR COOLED CONDENSING UNIT, OUTDOOR, SCROLL". Chosen because it's the
+  pictured/example part number on its own table (photo caption on p.152
+  reads "TQZA020L8HS2DE"), giving a clean photo+table+page match rather
+  than picking an arbitrary row.
+  - Table row (CONFIRMED, printed in catalog): HP 2, Voltage 208-230,
+    Phase 1, Hertz 60, Motor FLA 1.7A, MCA 19.1A, Fans 1, Receiver
+    Capacity 11 lbs, Suction 7/8 in, Liquid 3/8 in, Dimensions L18.75 x
+    W48.13 x H29.25 in, Ship Weight 320 lbs.
+  - Page-level/family note (CONFIRMED as printed, but scoped to the whole
+    "TQZA LINE, LOW TEMPERATURE, OUTDOOR" table, not verified per-SKU):
+    refrigerants "R22 R404A R407A R407C R448A R507"; "AF, AG models
+    include sealed liquid line filter drier, sight glass and mechanical
+    time clock"; "AG models include heated and insulated receiver
+    (required in ambients below 10°F)". The catalog does not show which
+    suffix segment of "TQZA020L8HS2DE" encodes AF vs AG, so which specific
+    bullets apply to this exact SKU is **not decoded** — shown in the UI
+    as a family-level note per CLAUDE.md §18, not asserted as this SKU's
+    confirmed feature list.
+  - Compressor: catalog states TQZA-line units use "Copeland scroll
+    compressors" (p.150 bullet, same product line) — manufacturer only,
+    no specific Copeland model/tonnage tied to this row anywhere in the
+    excerpt. Displayed as "Copeland scroll compressor (family-level,
+    exact model not in this catalog excerpt)", not a specific Copeland
+    part number — inventing one would violate CLAUDE.md §10.
+- **D-036** Companion/installation parts for the parts list, both from
+  `ACCESSORIES`, catalog/PDF p.194 (`...pt2-p165-195.pdf`, page index 29):
+  **BR1** compressor/condenser mounting bracket (inside dia 6 in, L14.0 x
+  W3.0 in, base width 3 in, Sigma Engineering) and the **SERCAP**
+  Rotalock-adapter replacement-cap series (sizes table on same page).
+- **D-037** Everything the catalog does *not* supply for a full 3D cutaway
+  (internal scroll geometry, coil fin pattern/count, cabinet panel
+  fastening, wire routing) is generic/schematic per CLAUDE.md §3's
+  fallback and D-034's labeling rule — built to be topologically/
+  functionally correct (real scroll-compressor operating principle, real
+  vapor-compression cycle order) but explicitly not a manufacturer
+  drawing. UI marks these pieces distinctly from the catalog-sourced
+  spec panel.
+
+---
+
+## 2026-09-08 (later still) — Condensing unit 3D visualization built
+
+### DECIDED
+
+- **D-038** Built `/visualize/condensing-unit`: Three.js scene (orbit/zoom/
+  pan, cutaway toggle, label toggle, animation speed, click-to-isolate a
+  component) + a spec panel rendering `TQZA020L8HS2DE`'s cited data from
+  D-035/036 with CATALOG-row vs. CATALOG-family badges, plus the
+  illustrative-operating-conditions block clearly marked as not a reading
+  for this unit. `three` added as a real dependency (D-032).
+- **D-039** Verified with Playwright screenshots against the running dev
+  server, not just `npm run build` succeeding - caught and fixed two real
+  bugs that a green build didn't surface: (1) the cabinet had no solid top
+  panel, so the "cutaway" toggle was a visual no-op from any elevated
+  camera angle - added a top panel with a circular cutout sized to the fan
+  grille; (2) the click-to-isolate dimming had an inverted guard clause
+  that skipped setting opacity on every material, so isolating a component
+  never actually dimmed the others - fixed, and gave the coil's translucent
+  fin-pack box a preserved base opacity so isolation doesn't flatten it to
+  fully opaque.
+
+### Known limitations (stated, not hidden)
+
+- Refrigeration-equipment catalog pages (135-195) were read visually
+  page-by-page for this one unit, not run through the `parse_catalog.py` /
+  Postgres pipeline the way Motor/Compressor/TXV are - no `catalog_parts`
+  rows, no search-index coverage, for this section yet. Fine for one
+  hand-picked unit; would need real ingestion before this visualization
+  could show a chosen search result instead of a fixed part number.
+- Compressor internal motion (scroll orbit) is a single indicator dot
+  orbiting a fixed radius - illustrative of the operating principle, not a
+  geometrically accurate scroll set.
+- Only one unit, one system type. O-007 (sequencing evaporator/air
+  handler, compressor types, ice machines, and the component gallery)
+  is still open - next system to build should be confirmed with the user
+  before starting, not assumed.
+
+---
+
 *Log format: append new dated sections per discovery round; do not rewrite prior entries except to change a status (e.g. OPEN → DECIDED) with a short note.*
